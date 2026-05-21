@@ -9,7 +9,7 @@ This module maps `code` → exception class and provides friendly defaults.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Type
+from typing import Any, cast
 
 
 class BrimeError(Exception):
@@ -21,14 +21,16 @@ class BrimeError(Exception):
         *,
         status: int,
         code: str,
-        details: Optional[Any] = None,
-        request_id: Optional[str] = None,
+        details: Any | None = None,
+        request_id: str | None = None,
+        retries_taken: int = 0,
     ) -> None:
         super().__init__(message)
         self.status = status
         self.code = code
         self.details = details
         self.request_id = request_id
+        self.retries_taken = retries_taken
 
     def __repr__(self) -> str:
         return (
@@ -42,7 +44,28 @@ class AuthenticationError(BrimeError):
 
 
 class RateLimitError(BrimeError):
-    """429 — rate limit exceeded."""
+    """429 — rate limit exceeded. `retry_after` (int seconds) is surfaced when the server sets the header."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        status: int,
+        code: str,
+        details: Any | None = None,
+        request_id: str | None = None,
+        retries_taken: int = 0,
+        retry_after: int | None = None,
+    ) -> None:
+        super().__init__(
+            message,
+            status=status,
+            code=code,
+            details=details,
+            request_id=request_id,
+            retries_taken=retries_taken,
+        )
+        self.retry_after = retry_after
 
 
 class InsufficientCreditsError(BrimeError):
@@ -65,7 +88,15 @@ class InternalError(BrimeError):
     """500 — unexpected Brime engine error."""
 
 
-_CODE_TO_CLASS: Dict[str, Type[BrimeError]] = {
+class ConnectionError(BrimeError):
+    """Network-level failure (DNS, ECONNRESET, TLS). status=0, code='connection_error'."""
+
+
+class TimeoutError(BrimeError):
+    """Request aborted because the configured timeout fired. status=0, code='timeout'."""
+
+
+_CODE_TO_CLASS: dict[str, type[BrimeError]] = {
     "unauthorized": AuthenticationError,
     "rate_limited": RateLimitError,
     "insufficient_credits": InsufficientCreditsError,
@@ -76,7 +107,7 @@ _CODE_TO_CLASS: Dict[str, Type[BrimeError]] = {
 }
 
 
-_FRIENDLY: Dict[str, str] = {
+_FRIENDLY: dict[str, str] = {
     "unauthorized": "Invalid Brime API key. Check api_key argument or BRIME_API_KEY env var.",
     "rate_limited": "Brime rate limit hit. Wait a moment and retry.",
     "insufficient_credits": "Brime account is out of credits for this period.",
@@ -89,14 +120,18 @@ _FRIENDLY: Dict[str, str] = {
 
 def exception_from_response(
     status: int,
-    body: Optional[Dict[str, Any]],
-    request_id: Optional[str] = None,
+    body: dict[str, Any] | None,
+    request_id: str | None = None,
 ) -> BrimeError:
     """Build the appropriate BrimeError subclass from an error response body."""
-    err = (body or {}).get("error") or {}
-    code = err.get("code")
-    message = err.get("message")
-    details = err.get("details")
+    err: dict[str, Any] = {}
+    if body is not None:
+        raw_err: Any = body.get("error")
+        if isinstance(raw_err, dict):
+            err = cast("dict[str, Any]", raw_err)
+    code: Any = err.get("code")
+    message: Any = err.get("message")
+    details: Any = err.get("details")
 
     if not isinstance(code, str) or not code:
         # Fall back by status when payload is not Brime-shaped.

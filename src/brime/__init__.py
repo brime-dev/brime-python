@@ -1,15 +1,19 @@
 """Brime — Official Python SDK."""
 
+from brime._response import APIResponse, AsyncAPIResponse
+from brime._streaming import AsyncStream, Stream
 from brime._version import __version__
 from brime.client import Brime
 from brime.errors import (
     AuthenticationError,
     BrimeError,
+    ConnectionError,
     InsufficientCreditsError,
     InternalError,
     InvalidRequestError,
     NotFoundError,
     RateLimitError,
+    TimeoutError,
     UpstreamError,
 )
 from brime.models.extract import (
@@ -27,26 +31,32 @@ from brime.models.research import (
 from brime.models.search import SearchResponse, SearchResultItem
 
 __all__ = [
-    "__version__",
+    "APIResponse",
+    "AsyncAPIResponse",
+    "AsyncStream",
+    "AuthenticationError",
     "Brime",
     "BrimeError",
-    "AuthenticationError",
-    "RateLimitError",
-    "InsufficientCreditsError",
-    "InvalidRequestError",
-    "NotFoundError",
-    "UpstreamError",
-    "InternalError",
-    "SearchResponse",
-    "SearchResultItem",
-    "ExtractResponse",
-    "ExtractResultItem",
+    "ConnectionError",
     "ExtractFailedItem",
     "ExtractMetadata",
+    "ExtractResponse",
+    "ExtractResultItem",
+    "InsufficientCreditsError",
+    "InternalError",
+    "InvalidRequestError",
+    "NotFoundError",
+    "RateLimitError",
     "ResearchBasicResponse",
     "ResearchDeepInitResponse",
-    "ResearchStatusResponse",
     "ResearchSseEvent",
+    "ResearchStatusResponse",
+    "SearchResponse",
+    "SearchResultItem",
+    "Stream",
+    "TimeoutError",
+    "UpstreamError",
+    "__version__",
 ]
 
 
@@ -54,5 +64,6 @@ def __getattr__(name: str) -> object:  # pragma: no cover
     """Lazy AsyncBrime import (added in S6)."""
     if name == "AsyncBrime":
         from brime.async_client import AsyncBrime
+
         return AsyncBrime
     raise AttributeError(name)

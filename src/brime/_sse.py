@@ -14,7 +14,7 @@ read() calls) and the [DONE] terminator.
 from __future__ import annotations
 
 import json
-from typing import AsyncIterator, Dict, Iterator, List, Optional
+from collections.abc import AsyncIterator, Iterator
 
 
 class _SseAccumulator:
@@ -38,8 +38,8 @@ class _SseAccumulator:
     def feed(self, chunk: str) -> None:
         self._buf += chunk
 
-    def pop_frames(self) -> List[Dict[str, object]]:
-        out: List[Dict[str, object]] = []
+    def pop_frames(self) -> list[dict[str, object]]:
+        out: list[dict[str, object]] = []
         while True:
             idx = self._buf.find("\n\n")
             if idx < 0:
@@ -56,18 +56,18 @@ class _SseAccumulator:
         return out
 
 
-_DONE_SENTINEL: Dict[str, object] = {"__done__": True}
+_DONE_SENTINEL: dict[str, object] = {"__done__": True}
 
 
-def _parse_frame(frame: str) -> Optional[Dict[str, object]]:
+def _parse_frame(frame: str) -> dict[str, object] | None:
     """Convert a raw SSE frame text into a normalized event dict.
 
     Returns None for empty/comment-only frames; returns _DONE_SENTINEL on
     `data: [DONE]` lines (used by some adapters).
     """
-    event_type: Optional[str] = None
-    event_id: Optional[str] = None
-    data_lines: List[str] = []
+    event_type: str | None = None
+    event_id: str | None = None
+    data_lines: list[str] = []
     for raw_line in frame.split("\n"):
         line = raw_line.rstrip("\r")
         if not line or line.startswith(":"):
@@ -107,19 +107,18 @@ def _parse_frame(frame: str) -> Optional[Dict[str, object]]:
     }
 
 
-def iter_sse_sync(byte_iter: Iterator[bytes]) -> Iterator[Dict[str, object]]:
+def iter_sse_sync(byte_iter: Iterator[bytes]) -> Iterator[dict[str, object]]:
     acc = _SseAccumulator()
     for chunk in byte_iter:
         if not chunk:
             continue
         acc.feed(chunk.decode("utf-8", errors="replace"))
-        for evt in acc.pop_frames():
-            yield evt
+        yield from acc.pop_frames()
         if acc.done:
             return
 
 
-async def iter_sse_async(byte_iter: AsyncIterator[bytes]) -> AsyncIterator[Dict[str, object]]:
+async def iter_sse_async(byte_iter: AsyncIterator[bytes]) -> AsyncIterator[dict[str, object]]:
     acc = _SseAccumulator()
     async for chunk in byte_iter:
         if not chunk:

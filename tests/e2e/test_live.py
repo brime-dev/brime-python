@@ -22,7 +22,6 @@ from brime import (
     ExtractResponse,
     InvalidRequestError,
     ResearchBasicResponse,
-    ResearchDeepInitResponse,
     ResearchSseEvent,
     ResearchStatusResponse,
     SearchResponse,
@@ -49,7 +48,9 @@ def test_g2_search_instant() -> None:
 def test_g2_search_basic() -> None:
     res = Brime().search("python async io patterns", depth="basic", max_results=5)
     assert isinstance(res, SearchResponse)
-    print(f"  G2 basic: {len(res.results)} results, answer_len={len(res.answer or '')}, lat={res.latency_ms}ms")
+    print(
+        f"  G2 basic: {len(res.results)} results, answer_len={len(res.answer or '')}, lat={res.latency_ms}ms"
+    )
 
 
 @needs_key
@@ -65,12 +66,12 @@ def test_g3_extract() -> None:
 
 @needs_key
 def test_g4_research_basic() -> None:
-    res = Brime(timeout=120.0).research(
-        "what is BM25", depth="basic", max_rounds=1
-    )
+    res = Brime(timeout=120.0).research("what is BM25", depth="basic", max_rounds=1)
     assert isinstance(res, ResearchBasicResponse)
     assert res.answer
-    print(f"  G4 basic: answer_len={len(res.answer)}, sources={len(res.sources)}, lat={res.latency_ms}ms")
+    print(
+        f"  G4 basic: answer_len={len(res.answer)}, sources={len(res.sources)}, lat={res.latency_ms}ms"
+    )
 
 
 @needs_key
@@ -98,9 +99,7 @@ def test_g6_research_deep_stream() -> None:
     client = Brime(timeout=60.0)
     saw_events: list[str] = []
     terminal = False
-    for evt in client.research_stream(
-        "what is BM25 ranking", depth="deep", max_rounds=2
-    ):
+    for evt in client.research_stream("what is BM25 ranking", depth="deep", max_rounds=2):
         assert isinstance(evt, ResearchSseEvent)
         saw_events.append(evt.event)
         if evt.event in ("complete", "error", "timeout"):
@@ -130,7 +129,7 @@ def test_g7_error_empty_query() -> None:
 
 @needs_key
 def test_g7_async_smoke() -> None:
-    """Async surface symmetry: sync ile aynı response shape."""
+    """Async surface symmetry: same response shape as the sync client."""
     import asyncio
 
     from brime import AsyncBrime

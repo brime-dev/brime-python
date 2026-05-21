@@ -1,12 +1,19 @@
 # brime
 
+[![PyPI](https://img.shields.io/pypi/v/brime.svg?logo=pypi)](https://pypi.org/project/brime/)
+[![Python](https://img.shields.io/pypi/pyversions/brime.svg?logo=python)](https://pypi.org/project/brime/)
+[![Typed](https://img.shields.io/pypi/types/brime.svg?logo=python)](https://pypi.org/project/brime/)
+[![MIT](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
+
 **The live-web toolkit for AI apps.** One API key. One SDK. Search, scrape, and research the open web — clean output, sane defaults, no plumbing.
+
+**[Documentation](https://docs.brime.dev/sdks/python)** | **[Get Your API Key](https://platform.brime.dev/keys)** | **[Changelog](./CHANGELOG.md)** | **[GitHub](https://github.com/brime-dev/brime-python)**
 
 ```bash
 pip install brime
 ```
 
-Python 3.9+. Sync and async clients. Fully typed (`py.typed`). Single dependency tree: `httpx` + `pydantic`.
+Python 3.9+. Sync and async clients, exponential-backoff retry, `with_raw_response` observability, fully typed (`py.typed`). Single dependency tree: `httpx` + `pydantic`. Released via [npm-style Trusted Publishing](https://docs.pypi.org/trusted-publishers/) — every wheel ships with PyPI provenance.
 
 ## Why brime?
 

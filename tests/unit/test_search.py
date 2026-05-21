@@ -16,7 +16,12 @@ def test_search_happy_path() -> None:
                 "query": "BM25 ranking",
                 "answer": "BM25 is a ranking function...",
                 "results": [
-                    {"title": "BM25 Wiki", "url": "https://en.wikipedia.org/wiki/Okapi_BM25", "content": "...", "score": 0.92}
+                    {
+                        "title": "BM25 Wiki",
+                        "url": "https://en.wikipedia.org/wiki/Okapi_BM25",
+                        "content": "...",
+                        "score": 0.92,
+                    }
                 ],
                 "request_id": "req_test",
                 "credits_used": 1,
@@ -36,7 +41,9 @@ def test_search_happy_path() -> None:
 @respx.mock
 def test_search_bad_key_raises_auth_error() -> None:
     respx.post("https://api.brime.dev/v1/search").mock(
-        return_value=httpx.Response(401, json={"error": {"code": "unauthorized", "message": "bad key"}})
+        return_value=httpx.Response(
+            401, json={"error": {"code": "unauthorized", "message": "bad key"}}
+        )
     )
     client = Brime(api_key="sk-bad")
     with pytest.raises(AuthenticationError) as exc:
@@ -48,7 +55,9 @@ def test_search_bad_key_raises_auth_error() -> None:
 @respx.mock
 def test_search_400_raises_invalid_request() -> None:
     respx.post("https://api.brime.dev/v1/search").mock(
-        return_value=httpx.Response(400, json={"error": {"code": "invalid_request", "message": "query empty"}})
+        return_value=httpx.Response(
+            400, json={"error": {"code": "invalid_request", "message": "query empty"}}
+        )
     )
     client = Brime(api_key="sk-test")
     with pytest.raises(InvalidRequestError):
@@ -61,12 +70,17 @@ def test_search_forwards_optional_filters() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         import json as _j
+
         captured.update(_j.loads(request.content.decode()))
         return httpx.Response(
             200,
             json={
-                "query": "x", "answer": None, "results": [],
-                "request_id": "r", "credits_used": 0.5, "latency_ms": 5,
+                "query": "x",
+                "answer": None,
+                "results": [],
+                "request_id": "r",
+                "credits_used": 0.5,
+                "latency_ms": 5,
             },
         )
 

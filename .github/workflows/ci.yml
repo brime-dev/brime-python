@@ -1,0 +1,70 @@
+name: CI brime (Python SDK)
+
+on:
+  pull_request:
+    paths:
+      - "python-sdk/**"
+      - ".github/workflows/ci-python-sdk.yml"
+  push:
+    branches: [main]
+    paths:
+      - "python-sdk/**"
+      - ".github/workflows/ci-python-sdk.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python-sdk
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: ">=0.9"
+
+      - name: Set Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --all-extras --frozen --python ${{ matrix.python-version }}
+
+      - name: Ruff format check
+        run: uv run ruff format --check
+
+      - name: Ruff lint
+        run: uv run ruff check
+
+      - name: Pyright (strict)
+        if: matrix.python-version == '3.13'
+        run: uv run pyright
+
+      - name: Mypy
+        run: uv run mypy
+
+      - name: Tests
+        run: uv run pytest -n auto -m 'not live' -ra
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    defaults:
+      run:
+        working-directory: python-sdk
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+      - name: Build
+        run: uv build
+      - name: Inspect tarball + wheel
+        run: uv run twine check --strict dist/*

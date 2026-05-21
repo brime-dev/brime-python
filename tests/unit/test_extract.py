@@ -15,7 +15,14 @@ def test_extract_auto_idempotency_key() -> None:
         return httpx.Response(
             200,
             json={
-                "results": [{"url": "https://example.com", "markdown": "# Hi", "method": "worker_static", "content_type": "html"}],
+                "results": [
+                    {
+                        "url": "https://example.com",
+                        "markdown": "# Hi",
+                        "method": "worker_static",
+                        "content_type": "html",
+                    }
+                ],
                 "failed": [],
                 "request_id": "r",
                 "credits_used": 1,
@@ -39,7 +46,13 @@ def test_extract_user_idempotency_key_passthrough() -> None:
         captured_headers.update(dict(request.headers))
         return httpx.Response(
             200,
-            json={"results": [], "failed": [], "request_id": "r", "credits_used": 0, "latency_ms": 1},
+            json={
+                "results": [],
+                "failed": [],
+                "request_id": "r",
+                "credits_used": 0,
+                "latency_ms": 1,
+            },
         )
 
     respx.post("https://api.brime.dev/v1/extract").mock(side_effect=handler)
@@ -125,7 +138,10 @@ def test_extract_failed_array() -> None:
             json={
                 "results": [],
                 "failed": [
-                    {"url": "https://bad", "error": {"code": "fetch_failed", "message": "404", "needs_browser": False}}
+                    {
+                        "url": "https://bad",
+                        "error": {"code": "fetch_failed", "message": "404", "needs_browser": False},
+                    }
                 ],
                 "request_id": "r",
                 "credits_used": 0,

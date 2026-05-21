@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -10,18 +10,18 @@ class ResearchSource(BaseModel):
 
     title: str
     url: str
-    content: Optional[str] = None
-    score: Optional[float] = None
-    published_date: Optional[str] = None
+    content: str | None = None
+    score: float | None = None
+    published_date: str | None = None
 
 
 class ResearchBasicResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     query: str
-    answer: Optional[str] = None
-    sources: List[ResearchSource]
-    steps: Optional[List[Dict[str, Any]]] = None
+    answer: str | None = None
+    sources: list[ResearchSource]
+    steps: list[dict[str, Any]] | None = None
     request_id: str
     credits_used: float
     latency_ms: int
@@ -57,11 +57,11 @@ class ResearchStatusResponse(BaseModel):
     depth: Literal["basic", "deep"]
     started_at: str
     updated_at: str
-    completed_at: Optional[str] = None
-    answer: Optional[str] = None
+    completed_at: str | None = None
+    answer: str | None = None
     sources_count: int
     steps_count: int
-    error: Optional[ResearchStatusError] = None
+    error: ResearchStatusError | None = None
     credits_used: float
 
 
@@ -80,4 +80,4 @@ class ResearchSseEvent(BaseModel):
 
     event: str
     data: Any
-    id: Optional[str] = None
+    id: str | None = None

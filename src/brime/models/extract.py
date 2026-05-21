@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
@@ -14,15 +14,15 @@ class ExtractMetadata(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-    title: Optional[str] = None
-    description: Optional[str] = None
-    author: Optional[str] = None
-    published_date: Optional[str] = None
-    canonical: Optional[str] = None
-    og_image: Optional[str] = None
-    language: Optional[str] = None
+    title: str | None = None
+    description: str | None = None
+    author: str | None = None
+    published_date: str | None = None
+    canonical: str | None = None
+    og_image: str | None = None
+    language: str | None = None
     # Worker phase timings — only present when include_metadata=true.
-    timings: Optional[Dict[str, Any]] = None
+    timings: dict[str, Any] | None = None
 
 
 class ExtractResultItem(BaseModel):
@@ -32,11 +32,11 @@ class ExtractResultItem(BaseModel):
     markdown: str
     method: str
     content_type: str
-    status: Optional[int] = None
-    latency_ms: Optional[int] = None
-    render_latency_ms: Optional[int] = None
-    detection: Optional[str] = None
-    metadata: Optional[ExtractMetadata] = None
+    status: int | None = None
+    latency_ms: int | None = None
+    render_latency_ms: int | None = None
+    detection: str | None = None
+    metadata: ExtractMetadata | None = None
 
 
 class ExtractFailedError(BaseModel):
@@ -44,7 +44,7 @@ class ExtractFailedError(BaseModel):
 
     code: str
     message: str
-    needs_browser: Optional[bool] = None
+    needs_browser: bool | None = None
 
 
 class ExtractFailedItem(BaseModel):
@@ -57,8 +57,8 @@ class ExtractFailedItem(BaseModel):
 class ExtractResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    results: List[ExtractResultItem]
-    failed: List[ExtractFailedItem]
+    results: list[ExtractResultItem]
+    failed: list[ExtractFailedItem]
     request_id: str
     credits_used: float
     latency_ms: int

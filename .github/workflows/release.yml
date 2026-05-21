@@ -1,0 +1,62 @@
+name: Release brime (PyPI)
+
+# Tag-driven release for the Python SDK. Uses PyPI Trusted Publishing via
+# GitHub Actions OIDC — no PYPI_TOKEN secret in the repo. Configure the
+# trusted publisher on PyPI: brime project → Manage → Publishing → Add
+# GitHub publisher → workflow filename release.yml on brime-dev/brime-python,
+# environment `pypi-publish`.
+
+on:
+  push:
+    tags:
+      - "python-sdk-v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write   # required for PyPI Trusted Publishing OIDC
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: pypi-publish
+    defaults:
+      run:
+        working-directory: python-sdk
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: ">=0.9"
+
+      - name: Install dependencies
+        run: uv sync --all-extras --frozen
+
+      - name: Ruff format check
+        run: uv run ruff format --check
+
+      - name: Ruff lint
+        run: uv run ruff check
+
+      - name: Pyright (strict)
+        run: uv run pyright
+
+      - name: Mypy (strict)
+        run: uv run mypy
+
+      - name: Unit tests
+        run: uv run pytest -n auto -m 'not live' -ra
+
+      - name: Build distributions
+        run: uv build
+
+      - name: Inspect distributions
+        run: uv run twine check --strict dist/*
+
+      - name: Publish to PyPI (Trusted Publishing)
+        # uv auto-detects GitHub OIDC when `id-token: write` is set; no token
+        # is passed. PyPI rejects the upload unless the trusted publisher is
+        # configured to match this exact (owner, repo, workflow, env) tuple.
+        run: uv publish

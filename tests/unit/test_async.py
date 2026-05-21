@@ -36,7 +36,13 @@ async def test_async_extract_auto_idempotency() -> None:
         captured.update(dict(request.headers))
         return httpx.Response(
             200,
-            json={"results": [], "failed": [], "request_id": "r", "credits_used": 0, "latency_ms": 1},
+            json={
+                "results": [],
+                "failed": [],
+                "request_id": "r",
+                "credits_used": 0,
+                "latency_ms": 1,
+            },
         )
 
     respx.post("https://api.brime.dev/v1/extract").mock(side_effect=handler)

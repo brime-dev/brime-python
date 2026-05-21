@@ -59,33 +59,55 @@ def test_research_deep_wait_polls_to_complete() -> None:
         return_value=httpx.Response(
             202,
             json={
-                "job_id": "j", "status": "queued",
-                "status_url": "/v1/research/j", "stream_url": "/v1/research/j/stream",
-                "request_id": "r", "credits_used": 5, "started_at": "2026-05-06T00:00:00Z",
+                "job_id": "j",
+                "status": "queued",
+                "status_url": "/v1/research/j",
+                "stream_url": "/v1/research/j/stream",
+                "request_id": "r",
+                "credits_used": 5,
+                "started_at": "2026-05-06T00:00:00Z",
             },
         )
     )
 
     def status_seq(values):
         it = iter(values)
+
         def h(request: httpx.Request) -> httpx.Response:
             return httpx.Response(200, json=next(it))
+
         return h
 
     base = {
-        "job_id": "j", "current_round": 0, "max_rounds": 5, "query": "q",
-        "depth": "deep", "started_at": "2026-05-06T00:00:00Z",
-        "updated_at": "2026-05-06T00:00:01Z", "completed_at": None,
-        "answer": None, "sources_count": 0, "steps_count": 0,
-        "error": None, "credits_used": 5,
+        "job_id": "j",
+        "current_round": 0,
+        "max_rounds": 5,
+        "query": "q",
+        "depth": "deep",
+        "started_at": "2026-05-06T00:00:00Z",
+        "updated_at": "2026-05-06T00:00:01Z",
+        "completed_at": None,
+        "answer": None,
+        "sources_count": 0,
+        "steps_count": 0,
+        "error": None,
+        "credits_used": 5,
     }
     respx.get("https://api.brime.dev/v1/research/j").mock(
-        side_effect=status_seq([
-            {**base, "status": "queued"},
-            {**base, "status": "running", "current_round": 2},
-            {**base, "status": "complete", "current_round": 5, "answer": "done", "sources_count": 7,
-             "completed_at": "2026-05-06T00:00:30Z"},
-        ])
+        side_effect=status_seq(
+            [
+                {**base, "status": "queued"},
+                {**base, "status": "running", "current_round": 2},
+                {
+                    **base,
+                    "status": "complete",
+                    "current_round": 5,
+                    "answer": "done",
+                    "sources_count": 7,
+                    "completed_at": "2026-05-06T00:00:30Z",
+                },
+            ]
+        )
     )
 
     res = Brime(api_key="sk-test").research(
