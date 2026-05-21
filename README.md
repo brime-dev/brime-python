@@ -1,80 +1,98 @@
-# brime — Python SDK
+# brime
 
-Official Python SDK for the [Brime API](https://brime.dev) — search, extract, and research the web with a single key.
+**The live-web toolkit for AI apps.** One API key. One SDK. Search, scrape, and research the open web — clean output, sane defaults, no plumbing.
 
 ```bash
 pip install brime
 ```
 
-## Quickstart
+Python 3.9+. Sync and async clients. Fully typed (`py.typed`). Single dependency tree: `httpx` + `pydantic`.
 
-### Search
+## Why brime?
+
+- **One key, three primitives.** `search`, `extract`, `research` — the shape every AI app needs from the web.
+- **Tuned defaults.** No depth selectors, no round counters, no knobs to babysit. The gateway is tuned for you; you pass a query, you get a clean answer.
+- **Drop-in compatible.** Already on Tavily, Exa, or Parallel? Point their SDK at our adapter URL and your code keeps working. Migrate when you're ready.
+- **Honest pricing.** Flat per-call credits. 0.5 for search, 1 per URL for extract, 5 for research. No surprises.
+
+## 30 seconds
 
 ```python
 from brime import Brime
 
-client = Brime(api_key="sk-brime-...")
-result = client.search("BM25 ranking algorithm")
+brime = Brime()  # reads BRIME_API_KEY
 
+# Live answer + ranked sources, sub-second.
+result = brime.search(query="what changed in the latest TypeScript release")
 print(result.answer)
-for r in result.results:
-    print(f"- {r.title}  {r.url}")
 ```
 
-### Extract
+That's the whole shape. Same pattern for `extract` and `research`.
+
+## What you can build
+
+### Search the open web
 
 ```python
-result = client.extract(["https://example.com", "https://en.wikipedia.org/wiki/BM25"])
-
-for r in result.results:
-    print(r.url, r.method, len(r.markdown))
-for f in result.failed:
-    print("FAIL", f.url, f.error.code, f.error.message)
-```
-
-### Research (basic — synchronous)
-
-```python
-result = client.research("what is the okapi bm25 formula", depth="basic")
-print(result.answer)
-print(f"Sources: {len(result.sources)}")
-```
-
-### Research (deep — wait for completion)
-
-```python
-result = client.research(
-    "compare frontier coding models with concrete benchmark numbers",
-    depth="deep",
-    wait=True,             # block until terminal
-    poll_interval=10,      # seconds between status polls
-    poll_timeout=420,      # seconds total
+result = brime.search(
+    query="tesla earnings",
+    topic="finance",       # optional: news / general / finance recency hint
+    time_range="week",     # optional: day / week / month / year
+    domains=["sec.gov"],   # optional allow-list
 )
-print(result.status)        # "complete" | "errored" | "timeout"
+```
+
+### Turn any URL into clean markdown
+
+```python
+result = brime.extract(urls=[
+    "https://example.com",
+    "https://en.wikipedia.org/wiki/BM25",
+])
+
+for r in result.results:
+    print(r.url, len(r.markdown))
+for f in result.failed:
+    print("skipped", f.url, f.error.message)
+```
+
+Handles HTML, PDF, DOCX, and JavaScript-heavy SPAs. The smart-clean pipeline strips chrome, nav, cookie banners, and template noise — what's left is the article.
+
+### Multi-step research with citations
+
+```python
+result = brime.research(
+    query="compare frontier coding models with concrete benchmark numbers",
+)
+
 print(result.answer)
-print(f"Sources: {result.sources_count}, rounds: {result.current_round}")
+print(f"{len(result.sources)} sources cited")
+```
+
+One call, ~30–90 seconds, real synthesis from real sources.
+
+Live progress? Stream it:
+
+```python
+for evt in brime.research_stream(query="..."):
+    print(evt.event, evt.data)
+    if evt.event in ("complete", "error", "timeout"):
+        break
 ```
 
 ## Authentication
-
-Pass `api_key=` directly **or** set the `BRIME_API_KEY` environment variable:
 
 ```bash
 export BRIME_API_KEY="sk-brime-..."
 ```
 
 ```python
-from brime import Brime
-client = Brime()                        # uses BRIME_API_KEY
-client = Brime(api_key="sk-brime-...")  # explicit override
+Brime()                        # uses BRIME_API_KEY
+Brime(api_key="sk-brime-...")  # explicit
+Brime(base_url="https://...")  # staging override (or BRIME_BASE_URL env)
 ```
 
-Override the base URL (for staging/preview):
-
-```python
-client = Brime(base_url="https://brime-api-preview.turanalp5645.workers.dev")
-# or via env: BRIME_BASE_URL=https://...
-```
+Get a key at [brime.dev](https://brime.dev) — the free tier comes with 1,000 credits/month and no card.
 
 ## Async
 
@@ -85,118 +103,86 @@ import asyncio
 from brime import AsyncBrime
 
 async def main():
-    async with AsyncBrime() as client:
-        result = await client.search("python async io")
+    async with AsyncBrime() as brime:
+        result = await brime.search(query="python async io")
         print(result.answer)
 
 asyncio.run(main())
 ```
 
-## Streaming research
+Async streaming works the same way:
 
 ```python
-for event in client.research_stream("what is BM25", depth="deep"):
-    print(event.event, event.data)
-    if event.event in ("complete", "error", "timeout"):
-        break
-```
-
-Async variant:
-
-```python
-async with AsyncBrime() as client:
-    async for event in client.research_stream("…", depth="deep"):
-        print(event.event)
-        if event.event == "complete":
+async with AsyncBrime() as brime:
+    async for evt in brime.research_stream(query="..."):
+        if evt.event == "complete":
+            print(evt.data)
             break
-```
-
-Resume from a previous stream cursor with `last_event_id="..."` (server replays from that frame onward).
-
-## Search depth
-
-| `depth`     | Behaviour                                                    | Credits |
-|-------------|--------------------------------------------------------------|---------|
-| `instant`   | SERP snippets, no scrape, no LLM answer (cache-first)        | 0.5     |
-| `basic`     | SERP + chunk + BM25 + LLM answer (default)                   | 1       |
-| `advanced`  | `basic` + advanced BM25 (Lv & Zhai 2011) + chunk reranking   | 2       |
-
-Common filters work on every depth:
-
-```python
-client.search(
-    "tesla earnings",
-    depth="advanced",
-    topic="finance",
-    time_range="week",
-    domains=["sec.gov", "investor.tesla.com"],
-    exclude_domains=["seekingalpha.com"],
-    max_results=10,
-)
 ```
 
 ## Error handling
 
-Every Brime error inherits from `BrimeError`:
+Typed exceptions, predictable surface area:
 
 ```python
 from brime import (
-    Brime,
     BrimeError,
     AuthenticationError,
     RateLimitError,
     InsufficientCreditsError,
-    InvalidRequestError,
-    NotFoundError,
-    UpstreamError,
-    InternalError,
 )
 
 try:
-    client.search("…")
+    brime.search(query="...")
 except AuthenticationError:
-    print("Bad API key")
+    ...  # bad key
 except RateLimitError:
-    print("Slow down")
+    ...  # back off
 except InsufficientCreditsError:
-    print("Top up at brime.dev/billing")
+    ...  # top up
 except BrimeError as e:
-    print(f"{e.code} (HTTP {e.status}): {e}")
+    print(e.code, e.message)
 ```
 
-## Idempotency
+## Idempotency, baked in
 
-`/v1/extract` and `/v1/research` (deep mode) require an `Idempotency-Key`. The SDK auto-generates a UUID4 per call, so retries against the same call site won't double-charge. Override with `idempotency_key="..."` when you want explicit deduplication across processes:
+`extract` calls require an `Idempotency-Key` — the SDK auto-generates one per call so accidental retries never double-charge. Pin it yourself for cross-process dedup:
 
 ```python
-client.extract(["https://x"], idempotency_key="my-stable-key-2026-05-06")
+brime.extract(
+    urls=["https://x"],
+    idempotency_key="user-42-prefetch-2026-05",
+)
 ```
 
-## Configuration reference
+## Configuration
 
-| Constructor arg | Env var          | Default                    |
-|-----------------|------------------|----------------------------|
-| `api_key`       | `BRIME_API_KEY`  | — (required)               |
-| `base_url`      | `BRIME_BASE_URL` | `https://api.brime.dev`     |
-| `timeout`       | —                | `30.0` seconds             |
+| Constructor arg | Env var          | Default                  |
+|-----------------|------------------|--------------------------|
+| `api_key`       | `BRIME_API_KEY`  | — (required)             |
+| `base_url`      | `BRIME_BASE_URL` | `https://api.brime.dev`  |
+| `timeout`       | —                | `30.0` seconds           |
 
-Per-call timeouts override the constructor: `client.search("…", timeout=60)`.
+Per-call override: `brime.search(query="...", timeout=60)`.
 
-## Compatibility
+## Already using Tavily, Exa, or Parallel?
 
-- Python 3.9+
-- Sync (`Brime`) and async (`AsyncBrime`) — fully type-annotated, ships with `py.typed`
-- Single dependency tree: `httpx>=0.27` and `pydantic>=2.6`
+You don't have to rip them out. Brime exposes wire-compatible adapters:
 
-## Drop-in clients
+```python
+TavilyClient(api_key, api_base_url="https://api.brime.dev/tavily")
+Exa(api_key=..., base_url="https://api.brime.dev/exa")
+Parallel(api_key, base_url="https://api.brime.dev/parallel")
+```
 
-Already using a different vendor's SDK? Brime exposes wire-compatible adapters under separate paths so the official SDKs work unchanged:
+Same response shapes, same code. Switch to the native `brime` SDK when you want the extras (research synthesis, SSE streaming, smart-clean extract).
 
-- Tavily — `TavilyClient(api_key, api_base_url="https://api.brime.dev/tavily")`
-- Exa — `Exa(api_key=..., base_url="https://api.brime.dev/exa")`
-- Parallel — `Parallel(api_key, base_url="https://api.brime.dev/parallel")`
+## Links
 
-Use those when migrating; reach for `brime` (this SDK) when starting fresh or wanting Brime-native ergonomics (deep research, SSE replay, depth presets).
+- Docs — [docs.brime.dev](https://docs.brime.dev)
+- API reference — [docs.brime.dev/api-reference](https://docs.brime.dev/api-reference)
+- Status — [brime.dev](https://brime.dev)
+- Issues — [github.com/brime-dev/brime-python/issues](https://github.com/brime-dev/brime-python/issues)
 
 ## License
 
